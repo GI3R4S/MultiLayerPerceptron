@@ -2,7 +2,7 @@
 {
     public partial class MLP
     {
-        public class Liniowa
+        public class Linear
         {
             public static double Function(double x)
             {

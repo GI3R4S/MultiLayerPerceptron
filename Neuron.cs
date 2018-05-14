@@ -41,7 +41,7 @@ namespace MLP
                 }
                 if (ActivationFunction == 2)
                 {
-                    result = Liniowa.Function(result);
+                    result = Linear.Function(result);
                 }
                 return result;
             }

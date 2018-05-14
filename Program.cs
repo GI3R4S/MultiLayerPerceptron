@@ -284,7 +284,7 @@ namespace MLP
                             diffrence = output[randomIndex] - OutputLayer[0].Output();
                             MSE += Pow(diffrence, 2);
 
-                            OutputLayer[0].Error = Liniowa.FunctionDerivative(OutputLayer[0].Output()) * diffrence;
+                            OutputLayer[0].Error = Linear.FunctionDerivative(OutputLayer[0].Output()) * diffrence;
                             for (int j = 0; j < HiddenLayer.Length; j++)
                             {
                                 HiddenLayer[j].Error = Sigm.FunctionDerivative(HiddenLayer[j].Output()) * OutputLayer[0].Error * OutputLayer[0].Weights[j];
