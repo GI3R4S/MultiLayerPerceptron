@@ -31,7 +31,7 @@ namespace MLP
                 {
                     result += Weights[i] * Inputs[i];
                 }
-                if (bias)
+                if (bias == MLP.Bias.biasOn)
                 {
                     result += Bias;
                 }
@@ -64,7 +64,7 @@ namespace MLP
                     PreviousChanges[i] = Error * Inputs[i] * learningFactor + momentumFactor * PreviousChanges[i];
                 }
 
-                if (bias)
+                if (bias == MLP.Bias.biasOn)
                 {
                     Bias += Error * learningFactor + momentumFactor * PreviousBiasChange;
                     PreviousBiasChange = Error * learningFactor + momentumFactor * PreviousBiasChange;
