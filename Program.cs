@@ -22,12 +22,12 @@ namespace MLP
         #endregion
 
         #region Parameters
-        static Variant variant = Variant.aproximation;
-        static Bias bias = Bias.biasOn;
-        static int hiddenLayerCount = 4;
+        static Variant variant = Variant.transformation;
+        static Bias bias = Bias.biasOff;
+        static int hiddenLayerCount = 3;
         static int epochsCount = 1000;
         static double executionsCount = 5;
-        static double learningFactor = 0.5;
+        static double learningFactor = 0.1;
         static double momentumFactor = 0.5;
         static double sigmoidSteepnessFactor = 1;
         static int trainingSetNumber = 2;  //Applies to aproximation variant
@@ -38,7 +38,8 @@ namespace MLP
             Random gen = new Random();
             if (variant == Variant.transformation)
             {
-
+                double succesfulOutputsCount = 0;
+                double totalOutputsCount = 4 * executionsCount;
                 for (int counter = 1; counter <= executionsCount; counter++)
                 {
                     string fileName = variant.ToString() + "_" + bias.ToString() + "_Execution" + counter.ToString() + "EpochsDiffrences.xml";
@@ -48,13 +49,15 @@ namespace MLP
                     double[][] testSamples = LoadTrainingDataFromFileTransformation();
                     double[][] finalInputOutput = null;
                     List<double[]> trainingSet = new List<double[]>();
+
+
                     RefillTrainingSet(trainingSet, testSamples);
 
 
-                    Neuron [] hiddenLayer = null;
-                    Neuron [] outputLayer = null;
+                    Neuron[] hiddenLayer = null;
+                    Neuron[] outputLayer = null;
                     InitalizeLayers(ref hiddenLayer, ref outputLayer);
-                    for(int i = 1; i <= epochsCount; i++)
+                    for (int i = 1; i <= epochsCount; i++)
                     {
                         double EpochMSE = 0;
                         double IterationError = 0;
@@ -88,7 +91,6 @@ namespace MLP
                             for (int k = 0; k < outputLayer.Length; k++)
                             {
                                 outputLayer[k].Error = Sigm.FunctionDerivative(outputLayer[k].Output()) * (outputsErrors[k]);
-                                outputLayer[k].UpdateWeights();
                             }
 
                             for (int k = 0; k < hiddenLayer.Length; k++)
@@ -100,23 +102,16 @@ namespace MLP
                                 }
                                 hiddenLayer[k].Error = value;
                             }
+                            for (int k = 0; k < outputLayer.Length; k++)
+                            {
+                                outputLayer[k].UpdateWeights();
+                            }
                             for (int k = 0; k < hiddenLayer.Length; k++)
                             {
                                 hiddenLayer[k].UpdateWeights();
                             }
                             trainingSet.RemoveAt(randomIndex);
                             EpochMSE += IterationError;
-                            if (i == epochsCount && j == 1)
-                            {
-                                finalInputOutput = new double[2][];
-                                XmlSerializer xs1 = new XmlSerializer(typeof(double[][]));
-                                finalInputOutput[0] = inputs1;
-                                finalInputOutput[1] = new double[] { outputLayer[0].Output(), outputLayer[1].Output(), outputLayer[2].Output(), outputLayer[3].Output() };
-                                using (StreamWriter sw1 = new StreamWriter(variant.ToString() + "_" + bias.ToString() + "_Execution" + counter.ToString() + "FinalInputOutput.xml"))
-                                {
-                                    xs1.Serialize(sw1, finalInputOutput);
-                                }
-                            }
                         }
                         EpochMSE /= 4;
                         RefillTrainingSet(trainingSet, testSamples);
@@ -124,10 +119,57 @@ namespace MLP
                             EpochsMSEs.Add(EpochMSE);
                     }
 
+
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        int maxIndex = 0;
+                        double[] inputs1 = trainingSet[i];
+                        double[] inputs2 = new double[hiddenLayerCount];
+                        foreach (Neuron n in hiddenLayer)
+                        {
+                            n.Inputs = inputs1;
+                        }
+                        for (int j = 0; j < hiddenLayer.Length; j++)
+                        {
+                            inputs2[j] = hiddenLayer[j].Output();
+                        }
+                        foreach (Neuron n in outputLayer)
+                        {
+                            n.Inputs = inputs2;
+                        }
+                        for (int j = 0; j < outputLayer.Length; j++)
+                        {
+                            if (outputLayer[j].Output() > outputLayer[maxIndex].Output())
+                            {
+                                maxIndex = j;
+                            }
+                        }
+                        List<int> indexes = GetNumbers(4);
+                        indexes.Remove(maxIndex);
+                        for (int j = 0; j < 4; j++)
+                        {
+                            WriteLine($"Input: {trainingSet[i][j]}  Output: {outputLayer[j].Output()}");
+                        }
+                        WriteLine();
+                        if (outputLayer[indexes[0]].Output() < 0.5 && outputLayer[indexes[1]].Output() < 0.5 && outputLayer[indexes[2]].Output() < 0.5 && outputLayer[maxIndex].Output() > 0.5)
+                        {
+                            succesfulOutputsCount++;
+                        }
+                    }
+                    WriteLine("================================================");
+                    ReadKey();
                     xs.Serialize(sw, EpochsMSEs);
-                    PrintEpochResult(finalInputOutput);
+
 
                 }
+                WriteLine($"Successful: {succesfulOutputsCount}  Total: {totalOutputsCount}");
+                XmlSerializer xs1 = new XmlSerializer(typeof(double[]));
+                using (StreamWriter sw1 = new StreamWriter(variant.ToString() + "_" + bias.ToString() + "_Execution_stats.xml"))
+                {
+                    xs1.Serialize(sw1, new double[] { succesfulOutputsCount, totalOutputsCount });
+                }
+                ReadKey();
             }
 
 
@@ -157,12 +199,12 @@ namespace MLP
                     double TrainingMSE = 0;
 
 
-                    for(int i = 1; i <= epochsCount; i++)
-                    { 
+                    for (int i = 1; i <= epochsCount; i++)
+                    {
                         List<int> numbers = GetNumbers(trainingDataInputs.Count);
                         List<double> finalOutput = new List<double>();
                         TrainingMSE = 0;
-                        for (int j =  0 ; j < trainingDataInputs.Count; j++)
+                        for (int j = 0; j < trainingDataInputs.Count; j++)
                         {
                             int randomIndex = gen.Next(numbers.Count);
                             numbers.RemoveAt(randomIndex);
@@ -241,7 +283,7 @@ namespace MLP
                 }
             }
         }
-        public static double [][] LoadTrainingDataFromFileTransformation()
+        public static double[][] LoadTrainingDataFromFileTransformation()
         {
             StreamReader sr = new StreamReader("../../resources/transformation.txt");
             double[][] testSamples = new double[4][];
@@ -264,7 +306,7 @@ namespace MLP
             return testSamples;
         }
 
-        public static void InitalizeLayers(ref Neuron [] hiddenLayer,ref Neuron [] outputLayer)
+        public static void InitalizeLayers(ref Neuron[] hiddenLayer, ref Neuron[] outputLayer)
         {
             hiddenLayer = new Neuron[hiddenLayerCount];
             outputLayer = new Neuron[4];
@@ -281,7 +323,7 @@ namespace MLP
             }
         }
 
-        public static void RefillTrainingSet(List<double[]> trainingSet, double [][] testSamples)
+        public static void RefillTrainingSet(List<double[]> trainingSet, double[][] testSamples)
         {
             trainingSet.Add(testSamples[0]);
             trainingSet.Add(testSamples[1]);
@@ -289,16 +331,6 @@ namespace MLP
             trainingSet.Add(testSamples[3]);
         }
 
-        public static void PrintEpochResult(double [][] finalInputOutput)
-        {
-            WriteLine("Final output: \n ");
-            for (int j = 0; j < finalInputOutput[0].GetLength(0); j++)
-            {
-                WriteLine(finalInputOutput[0][j] + " - " + finalInputOutput[1][j]);
-            }
-            WriteLine("Press any button to continue..");
-            ReadKey();
-        }
 
         public static void LoadTrainingDataFromFileAproximation(List<double> trainingDataInputs, List<double> trainingDataOutput, List<double> testingDataInputs, List<double> testingDataOutputs)
         {
